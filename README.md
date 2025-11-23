@@ -60,6 +60,13 @@ npm start
 - 422 (doğrulama için hazır): `{ "status": "error", "message": "Validation Failed", "errors": [ ... ] }`
 
 ## Endpointler ve Örnek İstek/Cevaplar
+Örneklerde global Axios ayarı kullanıldı:
+```js
+import axios from "axios";
+
+axios.defaults.baseURL = "http://localhost:3000";
+axios.defaults.headers.common["Content-Type"] = "application/json";
+```
 
 ### Health
 **GET /health**  
@@ -84,10 +91,12 @@ Başarılı 200:
 ### Auth
 **POST /auth/register**  
 İstek:
-```bash
-curl -X POST http://localhost:3000/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"email":"a@b.com","username":"alice","password":"secret"}'
+```js
+await axios.post("/auth/register", {
+  email: "a@b.com",
+  username: "alice",
+  password: "secret",
+});
 ```
 Başarılı 201:
 ```json
@@ -107,10 +116,13 @@ Hata 400 (email veya username varsa):
 
 **POST /auth/login**  
 İstek:
-```bash
-curl -X POST http://localhost:3000/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"a@b.com","password":"secret"}'
+```js
+const loginRes = await axios.post("/auth/login", {
+  email: "a@b.com",
+  password: "secret",
+});
+const token = loginRes.data.data.token;
+axios.defaults.headers.common.Authorization = `Bearer ${token}`;
 ```
 Başarılı 200:
 ```json
@@ -130,8 +142,8 @@ Hata 400:
 
 ### Kullanıcılar (`/users`)
 **GET /users/me** (Auth)  
-```bash
-curl http://localhost:3000/users/me -H "Authorization: Bearer <TOKEN>"
+```js
+const me = await axios.get("/users/me");
 ```
 Başarılı 200:
 ```json
@@ -154,8 +166,8 @@ Başarılı 200:
 ```
 
 **GET /users/:username**  
-```bash
-curl http://localhost:3000/users/alice
+```js
+const profile = await axios.get("/users/alice");
 ```
 Başarılı 200: profil ve son postlar
 ```json
@@ -178,11 +190,12 @@ Başarılı 200: profil ve son postlar
 ```
 
 **PUT /users/update** (Auth)  
-```bash
-curl -X PUT http://localhost:3000/users/update \
-  -H "Authorization: Bearer <TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d '{"firstName":"Alice","lastName":"Doe","avatarUrl":"https://img"}'
+```js
+await axios.put("/users/update", {
+  firstName: "Alice",
+  lastName: "Doe",
+  avatarUrl: "https://img",
+});
 ```
 Başarılı 200:
 ```json
@@ -190,11 +203,13 @@ Başarılı 200:
 ```
 
 **PUT /users/bio** (Auth)  
-```bash
-curl -X PUT http://localhost:3000/users/bio \
-  -H "Authorization: Bearer <TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d '{"bio":"Merhaba","location":"TR","website":"https://site","birthday":"1990-01-01"}'
+```js
+await axios.put("/users/bio", {
+  bio: "Merhaba",
+  location: "TR",
+  website: "https://site",
+  birthday: "1990-01-01",
+});
 ```
 Başarılı 200:
 ```json
@@ -202,8 +217,8 @@ Başarılı 200:
 ```
 
 **POST /users/follow/:username** (Auth)  
-```bash
-curl -X POST http://localhost:3000/users/follow/bob -H "Authorization: Bearer <TOKEN>"
+```js
+await axios.post("/users/follow/bob");
 ```
 Başarılı 200: `{ "status":"success","message":"User followed","data":{"followerId":"...","followingId":"..."}}`  
 Hata 400: `"You cannot follow yourself"` veya `"Already following"`
@@ -212,8 +227,10 @@ Hata 400: `"You cannot follow yourself"` veya `"Already following"`
 Başarılı 200: `{ "status":"success","message":"User unfollowed","data":{"count":1}}`
 
 **GET /users/check-username?username=foo**  
-```bash
-curl "http://localhost:3000/users/check-username?username=foo"
+```js
+const usernameCheck = await axios.get("/users/check-username", {
+  params: { username: "foo" },
+});
 ```
 Başarılı 200:
 ```json
@@ -222,11 +239,8 @@ Başarılı 200:
 
 ### Postlar (`/posts`)
 **POST /posts/create** (Auth)  
-```bash
-curl -X POST http://localhost:3000/posts/create \
-  -H "Authorization: Bearer <TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d '{"content":"Merhaba @bob"}'
+```js
+await axios.post("/posts/create", { content: "Merhaba @bob" });
 ```
 Başarılı 201:
 ```json
@@ -267,11 +281,11 @@ Başarılı 200:
 
 ### Yorumlar (`/comment`)
 **POST /comment/create** (Auth)  
-```bash
-curl -X POST http://localhost:3000/comment/create \
-  -H "Authorization: Bearer <TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d '{"postId":"post-uuid","content":"Güzel"}'
+```js
+await axios.post("/comment/create", {
+  postId: "post-uuid",
+  content: "Güzel",
+});
 ```
 Başarılı 201:
 ```json
@@ -300,25 +314,27 @@ Başarılı 200:
 ```
 
 ## Kısa Örnek Akış
-```bash
-# Register
-curl -X POST http://localhost:3000/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"email":"a@b.com","username":"alice","password":"secret"}'
+```js
+// 1) Register
+await axios.post("/auth/register", {
+  email: "a@b.com",
+  username: "alice",
+  password: "secret",
+});
 
-# Login
-TOKEN=$(curl -s -X POST http://localhost:3000/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"a@b.com","password":"secret"}' | jq -r '.data.token')
+// 2) Login
+const login = await axios.post("/auth/login", {
+  email: "a@b.com",
+  password: "secret",
+});
+axios.defaults.headers.common.Authorization = `Bearer ${login.data.data.token}`;
 
-# Post oluştur
-curl -X POST http://localhost:3000/posts/create \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"content":"Merhaba @bob"}'
+// 3) Post oluştur
+await axios.post("/posts/create", { content: "Merhaba @bob" });
 
-# Akış
-curl -H "Authorization: Bearer $TOKEN" http://localhost:3000/posts/feed/me
+// 4) Akış
+const feed = await axios.get("/posts/feed/me");
+console.log(feed.data);
 ```
 
 ## Notlar
