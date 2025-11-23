@@ -2,6 +2,15 @@
 
 Express, Prisma ve PostgreSQL ile yazılmış basit bir Twitter klonu API'si. JWT tabanlı kimlik doğrulama, kullanıcı profili, takip sistemi, gönderi/paylaşım (repost), beğeni, yorum ve mention desteği içerir.
 
+## Kullandığımız Paketler (Özet)
+- `express`: HTTP sunucusu ve routing.
+- `cors`: Cross-origin istekler için CORS desteği.
+- `dotenv`: .env dosyasından ortam değişkenlerini yükler.
+- `@prisma/client`, `prisma`, `@prisma/adapter-pg`, `pg`: PostgreSQL veritabanı erişimi ve ORM.
+- `jsonwebtoken`: JWT üretimi ve doğrulaması.
+- `bcrypt`: Parola hashleme ve karşılaştırma.
+- `nodemon` (dev): Geliştirme sırasında otomatik restart.
+
 ## Gereksinimler
 - Node.js 18+
 - PostgreSQL erişimi
@@ -32,76 +41,283 @@ npm start
 ```
 
 ## Genel Kullanım
-- Base URL: `http://localhost:3001`
+- Base URL: `http://localhost:3000`
 - Header: `Content-Type: application/json`
 - Kimlik doğrulama: `Authorization: Bearer <JWT>`
 - Health check: `GET /health` (DB gecikmesi dahil sistem bilgisi döner)
 
-### Response şekli
-Başarılı:
+## Response Türleri
+- Başarılı (200/201):
 ```json
-{ "status": "success", "message": "OK", "data": { ... } }
+{ "status": "success", "message": "OK", "data": { } }
 ```
-Hata:
+- Hata (400/404/500):
 ```json
 { "status": "error", "message": "Error", "errors": null }
 ```
-401 hataları: `Authorization header missing`, `Token not provided`, `Invalid or expired token`
+- 401: `{ "status": "error", "message": "Authorization header missing" | "Token not provided" | "Invalid or expired token" }`
+- 404: `{ "status": "error", "message": "Not Found" }`
+- 422 (doğrulama için hazır): `{ "status": "error", "message": "Validation Failed", "errors": [ ... ] }`
 
-## Endpointler
+## Endpointler ve Örnek İstek/Cevaplar
+
+### Health
+**GET /health**  
+Başarılı 200:
+```json
+{
+  "status": "success",
+  "message": "API is fully operational",
+  "data": {
+    "service": "twitter_api",
+    "environment": "development",
+    "uptime": 123.45,
+    "timestamp": "2024-01-01T10:00:00.000Z",
+    "versions": { "node": "v18.x", "api": "1.0.0" },
+    "system": { "platform": "darwin", "arch": "arm64" },
+    "database": { "status": "connected", "latencyMs": 5 },
+    "status": "operational"
+  }
+}
+```
 
 ### Auth
-- `POST /auth/register` — Body: `{ email, username, password }` → `{ user: { id, email, username, avatarUrl, createdAt }, token }`
-- `POST /auth/login` — Body: `{ email, password }` → `{ user: { id, email, username }, token }`
+**POST /auth/register**  
+İstek:
+```bash
+curl -X POST http://localhost:3000/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"a@b.com","username":"alice","password":"secret"}'
+```
+Başarılı 201:
+```json
+{
+  "status": "success",
+  "message": "User registered",
+  "data": {
+    "user": { "id": "uuid", "email": "a@b.com", "username": "alice", "avatarUrl": null, "createdAt": "2024-01-01T10:00:00.000Z" },
+    "token": "jwt-token"
+  }
+}
+```
+Hata 400 (email veya username varsa):
+```json
+{ "status": "error", "message": "Email already exists" }
+```
+
+**POST /auth/login**  
+İstek:
+```bash
+curl -X POST http://localhost:3000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"a@b.com","password":"secret"}'
+```
+Başarılı 200:
+```json
+{
+  "status": "success",
+  "message": "Login successful",
+  "data": {
+    "user": { "id": "uuid", "email": "a@b.com", "username": "alice" },
+    "token": "jwt-token"
+  }
+}
+```
+Hata 400:
+```json
+{ "status": "error", "message": "Invalid email or password" }
+```
 
 ### Kullanıcılar (`/users`)
-- `GET /me` (Auth) — Aktif kullanıcının profili, `bio`, `followers`, `following`
-- `GET /:username` — Herkese açık profil; `bio`, `followers`, `following`, `posts` (son eklenen ilk)
-- `PUT /update` (Auth) — Body: `{ firstName?, lastName?, avatarUrl? }`
-- `PUT /bio` (Auth) — Body: `{ bio?, location?, website?, birthday? }` (`birthday` ISO tarih)
-- `POST /follow/:username` (Auth) — Takip et; self-follow ve tekrar follow hata verir
-- `POST /unfollow/:username` (Auth) — Takipten çıkar
-- `GET /check-username?username=foo` — Kullanıcı adı uygunluğu `{ username, available }`
+**GET /users/me** (Auth)  
+```bash
+curl http://localhost:3000/users/me -H "Authorization: Bearer <TOKEN>"
+```
+Başarılı 200:
+```json
+{
+  "status": "success",
+  "message": "User loaded",
+  "data": {
+    "id": "uuid",
+    "email": "a@b.com",
+    "username": "alice",
+    "bio": { "bio": "Merhaba" },
+    "followers": [ { "followerId": "..." } ],
+    "following": [ { "followingId": "..." } ]
+  }
+}
+```
+401:
+```json
+{ "status": "error", "message": "Authorization header missing" }
+```
+
+**GET /users/:username**  
+```bash
+curl http://localhost:3000/users/alice
+```
+Başarılı 200: profil ve son postlar
+```json
+{
+  "status": "success",
+  "message": "Profile loaded",
+  "data": {
+    "id": "uuid",
+    "username": "alice",
+    "bio": { "bio": "Merhaba" },
+    "followers": [],
+    "following": [],
+    "posts": [ { "id": "post-uuid", "content": "hi", "createdAt": "..." } ]
+  }
+}
+```
+404:
+```json
+{ "status": "error", "message": "User not found" }
+```
+
+**PUT /users/update** (Auth)  
+```bash
+curl -X PUT http://localhost:3000/users/update \
+  -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"firstName":"Alice","lastName":"Doe","avatarUrl":"https://img"}'
+```
+Başarılı 200:
+```json
+{ "status": "success", "message": "Profile updated", "data": { "firstName": "Alice", "lastName": "Doe", "avatarUrl": "https://img" } }
+```
+
+**PUT /users/bio** (Auth)  
+```bash
+curl -X PUT http://localhost:3000/users/bio \
+  -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"bio":"Merhaba","location":"TR","website":"https://site","birthday":"1990-01-01"}'
+```
+Başarılı 200:
+```json
+{ "status": "success", "message": "Bio updated", "data": { "bio": "Merhaba", "location": "TR", "website": "https://site", "birthday": "1990-01-01T00:00:00.000Z" } }
+```
+
+**POST /users/follow/:username** (Auth)  
+```bash
+curl -X POST http://localhost:3000/users/follow/bob -H "Authorization: Bearer <TOKEN>"
+```
+Başarılı 200: `{ "status":"success","message":"User followed","data":{"followerId":"...","followingId":"..."}}`  
+Hata 400: `"You cannot follow yourself"` veya `"Already following"`
+
+**POST /users/unfollow/:username** (Auth)  
+Başarılı 200: `{ "status":"success","message":"User unfollowed","data":{"count":1}}`
+
+**GET /users/check-username?username=foo**  
+```bash
+curl "http://localhost:3000/users/check-username?username=foo"
+```
+Başarılı 200:
+```json
+{ "status": "success", "message": "Username checked", "data": { "username": "foo", "available": true } }
+```
 
 ### Postlar (`/posts`)
-- `POST /create` (Auth) — Body: `{ content }`; içerikteki `@username` mention’ları otomatik kaydedilir
-- `GET /:id` — Tek post; `author`, `likes`, `comments`, `reposts` dahil
-- `DELETE /delete/:id` (Auth) — Sadece sahibi silebilir
-- `POST /like/:id` (Auth) — Beğeni ekler ve `likeCount` artırır
-- `POST /unlike/:id` (Auth) — Beğeniyi kaldırır ve `likeCount` azaltır
-- `POST /repost/:id` (Auth) — Repost ekler ve `repostCount` artırır
-- `POST /unrepost/:id` (Auth) — Repost kaldırır ve `repostCount` azaltır
-- `GET /feed/me` (Auth) — Takip edilenler + kendin; 50 post, `author/likes/comments/reposts` dahil, yeni→eski
+**POST /posts/create** (Auth)  
+```bash
+curl -X POST http://localhost:3000/posts/create \
+  -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"content":"Merhaba @bob"}'
+```
+Başarılı 201:
+```json
+{ "status": "success", "message": "Post created", "data": { "id": "post-uuid", "content": "Merhaba @bob", "authorId": "user-uuid", "mentionUsernames": ["bob"] } }
+```
+
+**GET /posts/:id**  
+Başarılı 200: `{ "status":"success","message":"Post loaded","data":{ "id":"...", "author":{...}, "likes":[...], "comments":[...], "reposts":[...] } }`  
+404: `{ "status":"error","message":"Post not found" }`
+
+**DELETE /posts/delete/:id** (Auth)  
+Başarılı 200: `{ "status":"success","message":"Post deleted","data":{} }`  
+Hata 400: `"Unauthorized to delete"`
+
+**POST /posts/like/:id** (Auth)  
+Başarılı 200: `{ "status":"success","message":"Post liked","data":{"liked":true} }`
+
+**POST /posts/unlike/:id** (Auth)  
+Başarılı 200: `{ "status":"success","message":"Post unliked","data":{} }`
+
+**POST /posts/repost/:id** (Auth)  
+Başarılı 200: `{ "status":"success","message":"Post reposted","data":{"reposted":true} }`
+
+**POST /posts/unrepost/:id** (Auth)  
+Başarılı 200: `{ "status":"success","message":"Repost removed","data":{} }`
+
+**GET /posts/feed/me** (Auth)  
+Başarılı 200:
+```json
+{
+  "status": "success",
+  "message": "Feed loaded",
+  "data": [
+    { "id": "post-uuid", "content": "hi", "author": { "username": "alice" }, "likes": [], "comments": [], "reposts": [] }
+  ]
+}
+```
 
 ### Yorumlar (`/comment`)
-- `POST /create` (Auth) — Body: `{ postId, content }`; `commentCount` artırır
-- `GET /:id` — Yorum; `user` ve `post` dahil
-- `DELETE /delete/:id` (Auth) — Sadece yorumu oluşturan kullanıcı silebilir; `commentCount` azaltır
-- `GET /post/:postId` — Bir posta ait yorum listesi (eski→yeni), `user` bilgisiyle
-
-## Örnek İstek Akışı
+**POST /comment/create** (Auth)  
 ```bash
-# 1) Register
+curl -X POST http://localhost:3000/comment/create \
+  -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"postId":"post-uuid","content":"Güzel"}'
+```
+Başarılı 201:
+```json
+{ "status": "success", "message": "Comment created", "data": { "id": "comment-uuid", "postId": "post-uuid", "content": "Güzel", "user": { "id": "user-uuid" } } }
+```
+Hata 400: `{ "status": "error", "message": "Content cannot be empty" }`
+
+**GET /comment/:id**  
+Başarılı 200: `{ "status":"success","message":"Comment loaded","data":{ "id":"...", "content":"...", "user":{...}, "post":{...} } }`  
+404: `{ "status":"error","message":"Comment not found" }`
+
+**DELETE /comment/delete/:id** (Auth)  
+Başarılı 200: `{ "status":"success","message":"Comment deleted","data":{} }`  
+Hata 400: `"Unauthorized to delete"`
+
+**GET /comment/post/:postId**  
+Başarılı 200:
+```json
+{
+  "status": "success",
+  "message": "Comments loaded",
+  "data": [
+    { "id": "comment-uuid", "content": "Güzel", "user": { "username": "alice" }, "createdAt": "..." }
+  ]
+}
+```
+
+## Kısa Örnek Akış
+```bash
+# Register
 curl -X POST http://localhost:3000/auth/register \
   -H "Content-Type: application/json" \
   -d '{"email":"a@b.com","username":"alice","password":"secret"}'
 
-# 2) Login (token al)
+# Login
 TOKEN=$(curl -s -X POST http://localhost:3000/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"a@b.com","password":"secret"}' | jq -r '.data.token')
 
-# 3) Post oluştur
+# Post oluştur
 curl -X POST http://localhost:3000/posts/create \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"content":"Merhaba @bob"}'
 
-# 4) Takip et
-curl -X POST http://localhost:3000/users/follow/bob \
-  -H "Authorization: Bearer $TOKEN"
-
-# 5) Akış
+# Akış
 curl -H "Authorization: Bearer $TOKEN" http://localhost:3000/posts/feed/me
 ```
 
