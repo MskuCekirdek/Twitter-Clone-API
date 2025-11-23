@@ -6,12 +6,12 @@ export const register = async (data) => {
   const { email, username, password } = data;
 
   const existingEmail = await prisma.user.findUnique({ where: { email } });
-  if (existingEmail) throw new Error("Email already exists");
+  if (existingEmail) throw new Error("Bu Email zaten kayıtlı");
 
   const existingUsername = await prisma.user.findUnique({
     where: { username },
   });
-  if (existingUsername) throw new Error("Username already exists");
+  if (existingUsername) throw new Error("Bu kullanıcı adı zaten alınmış");
 
   const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -26,7 +26,6 @@ export const register = async (data) => {
       email: true,
       username: true,
       createdAt: true,
-      avatarUrl: true,
     },
   });
 
@@ -40,10 +39,10 @@ export const register = async (data) => {
 export const login = async (email, password) => {
   const user = await prisma.user.findUnique({ where: { email } });
 
-  if (!user) throw new Error("Invalid email or password");
+  if (!user) throw new Error("Hatalı email veya şifre");
 
   const isMatch = await bcrypt.compare(password, user.password);
-  if (!isMatch) throw new Error("Invalid email or password");
+  if (!isMatch) throw new Error("Hatalı email veya şifre");
 
   const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN,
@@ -56,5 +55,22 @@ export const login = async (email, password) => {
       username: user.username,
     },
     token,
+  };
+};
+
+export const checkUsername = async (username) => {
+  if (!username || username.trim() === "") {
+    throw new Error("Kullanıcı adı gerekli");
+  }
+
+  const find = await prisma.user.findUnique({
+    where: { username },
+  });
+
+  const result = find === null ? true : false;
+
+  return {
+    available: result,
+    username,
   };
 };

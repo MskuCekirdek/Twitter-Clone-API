@@ -228,13 +228,11 @@ Başarılı 200: `{ "status":"success","message":"User unfollowed","data":{"coun
 
 **GET /users/check-username?username=foo**  
 ```js
-const usernameCheck = await axios.get("/users/check-username", {
-  params: { username: "foo" },
-});
+const usernameCheck = await axios.get("/auth/check-username/{username}");
 ```
 Başarılı 200:
 ```json
-{ "status": "success", "message": "Username checked", "data": { "username": "foo", "available": true } }
+{ "status": "success", "message": "Kullanıcı adı kontrol edildi", "data": { "username": "foo", "available": true } }
 ```
 
 ### Postlar (`/posts`)

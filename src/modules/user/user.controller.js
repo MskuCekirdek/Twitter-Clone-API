@@ -7,6 +7,7 @@ export const getMe = async (req, res) => {
 
     return success(res, "User loaded", user);
   } catch (err) {
+    console.error("Error fetching user:", err);
     return error(res, err.message);
   }
 };
@@ -21,6 +22,7 @@ export const getProfile = async (req, res) => {
 
     return success(res, "Profile loaded", user);
   } catch (err) {
+    console.error("Error fetching profile:", err);
     return error(res, err.message);
   }
 };
@@ -62,22 +64,6 @@ export const unfollow = async (req, res) => {
     const result = await userService.unfollow(req.user.id, username);
 
     return success(res, "User unfollowed", result);
-  } catch (err) {
-    return error(res, err.message);
-  }
-};
-
-// Register da kullanılacak
-export const checkUsername = async (req, res) => {
-  try {
-    const { username } = req.query;
-
-    if (!username || username.trim() === "") {
-      return error(res, "Username is required", 400);
-    }
-
-    const result = await userService.checkUsername(username);
-    return success(res, "Username checked", result);
   } catch (err) {
     return error(res, err.message);
   }

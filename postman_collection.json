@@ -1,0 +1,296 @@
+{
+  "info": {
+    "name": "Twitter API (local)",
+    "_postman_id": "twitter-api-collection",
+    "description": "Postman koleksiyonu: tüm endpointler için örnek istekler ve token değişkeni.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "token", "value": "" },
+    { "key": "username", "value": "alice" },
+    { "key": "password", "value": "secret" },
+    { "key": "email", "value": "a@b.com" },
+    { "key": "postId", "value": "" },
+    { "key": "commentId", "value": "" },
+    { "key": "followTarget", "value": "bob" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] }
+      }
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login (set token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res && res.data && res.data.token) {",
+                  "  pm.collectionVariables.set('token', res.data.token);",
+                  "  console.log('Token set');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get Me",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/users/me", "host": ["{{baseUrl}}"], "path": ["users", "me"] }
+          }
+        },
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/users/{{username}}", "host": ["{{baseUrl}}"], "path": ["users", "{{username}}"] }
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/users/update", "host": ["{{baseUrl}}"], "path": ["users", "update"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Alice\",\n  \"lastName\": \"Doe\",\n  \"avatarUrl\": \"https://img\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Bio",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/users/bio", "host": ["{{baseUrl}}"], "path": ["users", "bio"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bio\": \"Merhaba\",\n  \"location\": \"TR\",\n  \"website\": \"https://site\",\n  \"birthday\": \"1990-01-01\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Follow",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/users/follow/{{followTarget}}", "host": ["{{baseUrl}}"], "path": ["users", "follow", "{{followTarget}}"] }
+          }
+        },
+        {
+          "name": "Unfollow",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/users/unfollow/{{followTarget}}", "host": ["{{baseUrl}}"], "path": ["users", "unfollow", "{{followTarget}}"] }
+          }
+        },
+        {
+          "name": "Check Username",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/check-username?username={{username}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "check-username"],
+              "query": [{ "key": "username", "value": "{{username}}" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Posts",
+      "item": [
+        {
+          "name": "Create Post",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res && res.data && res.data.id) {",
+                  "  pm.collectionVariables.set('postId', res.data.id);",
+                  "  console.log('postId set');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/posts/create", "host": ["{{baseUrl}}"], "path": ["posts", "create"] },
+            "body": { "mode": "raw", "raw": "{ \"content\": \"Merhaba @bob\" }" }
+          }
+        },
+        {
+          "name": "Get Post",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/posts/{{postId}}", "host": ["{{baseUrl}}"], "path": ["posts", "{{postId}}"] }
+          }
+        },
+        {
+          "name": "Delete Post",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/posts/delete/{{postId}}", "host": ["{{baseUrl}}"], "path": ["posts", "delete", "{{postId}}"] }
+          }
+        },
+        {
+          "name": "Like",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/posts/like/{{postId}}", "host": ["{{baseUrl}}"], "path": ["posts", "like", "{{postId}}"] }
+          }
+        },
+        {
+          "name": "Unlike",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/posts/unlike/{{postId}}", "host": ["{{baseUrl}}"], "path": ["posts", "unlike", "{{postId}}"] }
+          }
+        },
+        {
+          "name": "Repost",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/posts/repost/{{postId}}", "host": ["{{baseUrl}}"], "path": ["posts", "repost", "{{postId}}"] }
+          }
+        },
+        {
+          "name": "Unrepost",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/posts/unrepost/{{postId}}", "host": ["{{baseUrl}}"], "path": ["posts", "unrepost", "{{postId}}"] }
+          }
+        },
+        {
+          "name": "Feed (me)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/posts/feed/me", "host": ["{{baseUrl}}"], "path": ["posts", "feed", "me"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Comments",
+      "item": [
+        {
+          "name": "Create Comment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res && res.data && res.data.id) {",
+                  "  pm.collectionVariables.set('commentId', res.data.id);",
+                  "  console.log('commentId set');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/comment/create", "host": ["{{baseUrl}}"], "path": ["comment", "create"] },
+            "body": { "mode": "raw", "raw": "{ \"postId\": \"{{postId}}\", \"content\": \"Güzel\" }" }
+          }
+        },
+        {
+          "name": "Get Comment",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/comment/{{commentId}}", "host": ["{{baseUrl}}"], "path": ["comment", "{{commentId}}"] }
+          }
+        },
+        {
+          "name": "Delete Comment",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/comment/delete/{{commentId}}", "host": ["{{baseUrl}}"], "path": ["comment", "delete", "{{commentId}}"] }
+          }
+        },
+        {
+          "name": "Comments for Post",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/comment/post/{{postId}}", "host": ["{{baseUrl}}"], "path": ["comment", "post", "{{postId}}"] }
+          }
+        }
+      ]
+    }
+  ]
+}

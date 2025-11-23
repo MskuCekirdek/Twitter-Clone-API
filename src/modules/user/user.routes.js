@@ -20,7 +20,4 @@ router.put("/bio", authGuard, userController.updateBio);
 router.post("/follow/:username", authGuard, userController.follow);
 router.post("/unfollow/:username", authGuard, userController.unfollow);
 
-// Kullanıcı adı kontrolü
-router.get("/check-username", userController.checkUsername);
-
 export default router;

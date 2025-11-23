@@ -1,20 +1,29 @@
 import prisma from "../../config/prisma.js";
 
 export const getMe = async (userId) => {
-  return await prisma.user.findUnique({
+  const user = await prisma.user.findUnique({
     where: { id: userId },
     include: {
       bio: true,
       followers: true,
       following: true,
+      posts: {
+        orderBy: { createdAt: "desc" },
+      },
+      likes: true,
     },
   });
+  return user;
 };
 
 export const getProfile = async (username) => {
-  return await prisma.user.findUnique({
+  const result = await prisma.user.findUnique({
     where: { username },
-    include: {
+    select: {
+      firstName: true,
+      lastName: true,
+      avatarUrl: true,
+      createdAt: true,
       bio: true,
       followers: true,
       following: true,
@@ -23,6 +32,8 @@ export const getProfile = async (username) => {
       },
     },
   });
+
+  return result;
 };
 
 export const updateProfile = async (userId, data) => {
@@ -58,6 +69,9 @@ export const updateBio = async (userId, data) => {
   });
 };
 
+// TODO
+// FOLLOW VE UNFOLLOW TEST ET
+
 export const follow = async (followerId, username) => {
   const targetUser = await prisma.user.findUnique({ where: { username } });
   if (!targetUser) throw new Error("User not found");
@@ -92,16 +106,4 @@ export const unfollow = async (followerId, username) => {
       followingId: targetUser.id,
     },
   });
-};
-
-// Kullanıcı adı uygunluğunu kontrol etme
-export const checkUsername = async (username) => {
-  const existing = await prisma.user.findUnique({
-    where: { username },
-  });
-
-  return {
-    username,
-    available: existing ? false : true,
-  };
 };
