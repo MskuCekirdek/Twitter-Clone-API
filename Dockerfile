@@ -2,7 +2,7 @@
 FROM node:20-alpine
 
 # Çalışma dizini
-WORKDIR /app
+WORKDIR /
 
 # Paketleri önce kopyala
 COPY package*.json ./
