@@ -1,0 +1,173 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id       String @id @default(uuid())
+  email    String @unique
+  password String
+  username String @unique
+
+  firstName String?
+  lastName  String?
+  avatarUrl String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  bio UserBio?
+
+  posts    Post[]    @relation("UserPosts")
+  comments Comment[]
+  likes    Like[]
+  reposts  Repost[]
+  mentions Mention[]
+
+  // Follow sistemi
+  following Follow[] @relation("UserFollowing")
+  followers Follow[] @relation("UserFollowers")
+
+  // Şifre unutma OTP
+  otps OtpCode[]
+}
+
+model UserBio {
+  id       String    @id @default(uuid())
+  userId   String    @unique
+  bio      String?
+  location String?
+  website  String?
+  birthday DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Post {
+  id       String @id @default(uuid())
+  content  String
+  authorId String
+  author   User   @relation("UserPosts", fields: [authorId], references: [id], onDelete: Cascade)
+
+  // Twitter gibi: post bir başka postun yanıtı olabilir
+  replyToId String?
+  replyTo   Post?   @relation("PostReplies", fields: [replyToId], references: [id], onDelete: Cascade)
+  replies   Post[]  @relation("PostReplies")
+
+  // Etkileşim tabloları
+  likes    Like[]
+  reposts  Repost[]
+  comments Comment[]
+  mentions Mention[]
+
+  // Sayılar (denormalized counters)
+  likeCount    Int @default(0)
+  repostCount  Int @default(0)
+  commentCount Int @default(0)
+
+  // Mention edilen kullanıcı adları (hızlı gösterim için)
+  mentionUsernames String[] @default([])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([authorId, createdAt])
+}
+
+model Like {
+  id     String @id @default(uuid())
+  userId String
+  postId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, postId]) // aynı postu 2 kere beğenemez
+  @@index([postId])
+}
+
+model Repost {
+  id     String @id @default(uuid())
+  userId String
+  postId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, postId]) // aynı postu 2 kere repost edemez
+  @@index([postId])
+}
+
+model Comment {
+  id      String @id @default(uuid())
+  content String
+
+  userId String
+  postId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([postId, createdAt])
+}
+
+model Mention {
+  id     String @id @default(uuid())
+  postId String
+  userId String
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId]) // aynı postta aynı kişi 2 kere mention olmaz
+  @@index([userId])
+}
+
+model Follow {
+  id          String @id @default(uuid())
+  followerId  String
+  followingId String
+
+  follower  User @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([followerId, followingId])
+  @@index([followingId])
+}
+
+model OtpCode {
+  id        String     @id @default(uuid())
+  userId    String
+  codeHash  String // otp’yi düz tutma, hashle
+  purpose   OtpPurpose
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, expiresAt])
+}
+
+enum OtpPurpose {
+  PASSWORD_RESET
+  EMAIL_VERIFY
+}
