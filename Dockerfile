@@ -23,4 +23,4 @@ COPY . .
 EXPOSE 3001
 
 # Sunucuyu başlat
-CMD ["node", "app.js"]
+CMD ["node", "src/app.js"]
