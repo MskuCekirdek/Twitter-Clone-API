@@ -123,7 +123,7 @@ export const unrepost = async (userId, postId) => {
   });
 };
 
-export const getFeed = async (userId) => {
+export const getFeedMe = async (userId) => {
   // 1) Kullanıcının takip ettiklerini bul
   const following = await prisma.follow.findMany({
     where: { followerId: userId },
@@ -150,4 +150,30 @@ export const getFeed = async (userId) => {
     },
     take: 50,
   });
+};
+
+export const getFeed = async (page = 1, limit = 10) => {
+  const skip = (page - 1) * limit;
+
+  const posts = await prisma.post.findMany({
+    skip,
+    take: limit,
+    orderBy: {
+      createdAt: "desc",
+    },
+    include: {
+      author: true,
+      likes: true,
+      comments: true,
+      reposts: true,
+    },
+  });
+
+  const total = await prisma.post.count();
+
+  return {
+    posts,
+    total,
+    hasMore: page * limit < total,
+  };
 };

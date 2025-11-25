@@ -7,6 +7,7 @@ import authRoutes from "../modules/auth/auth.routes.js";
 import userRoutes from "../modules/user/user.routes.js";
 import postRoutes from "../modules/post/post.routes.js";
 import commentRoutes from "../modules/comment/comment.routes.js";
+import { getFeed } from "../modules/post/post.controller.js";
 
 const router = Router();
 
@@ -15,6 +16,7 @@ router.use("/auth", authRoutes);
 router.use("/users", userRoutes);
 router.use("/posts", postRoutes);
 router.use("/comment", commentRoutes);
+router.get("/feed", getFeed);
 
 // Sağlık kontrolü endpointi
 router.get("/health", async (req, res) => {

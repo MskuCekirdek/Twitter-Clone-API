@@ -22,6 +22,6 @@ router.post("/repost/:id", authGuard, postController.repost);
 router.post("/unrepost/:id", authGuard, postController.unrepost);
 
 // feed (following + your posts)
-router.get("/feed/me", authGuard, postController.getFeed);
+router.get("/feed-me", authGuard, postController.getFeedMe);
 
 export default router;

@@ -67,10 +67,22 @@ export const unrepost = async (req, res) => {
   }
 };
 
+export const getFeedMe = async (req, res) => {
+  try {
+    const posts = await postService.getFeedMe(req.user.id);
+    return success(res, "Feed loaded", posts);
+  } catch (err) {
+    return error(res, err.message);
+  }
+};
+
 export const getFeed = async (req, res) => {
   try {
-    const posts = await postService.getFeed(req.user.id);
-    return success(res, "Feed loaded", posts);
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+
+    const result = await postService.getFeed(page, limit);
+    return success(res, "Feed loaded", result);
   } catch (err) {
     return error(res, err.message);
   }
