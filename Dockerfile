@@ -1,5 +1,5 @@
 # Node 20 Alpine — hızlı ve küçük image
-FROM node:20-alpine
+FROM node:20-slim
 
 # Çalışma dizini
 WORKDIR /
